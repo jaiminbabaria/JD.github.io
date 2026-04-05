@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Codenames — Mythological Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Noto+Sans:wght@300;400;500&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  min-height:100vh;
+  background:radial-gradient(ellipse at top,#281408 0%,#100704 55%,#060200 100%);
+  color:#f5e6d3;font-family:'Cinzel',serif;
+  -webkit-tap-highlight-color:transparent;
+}
+:root{--gold:#d4a843;--gold-light:#f0d78c;--dark:#120905;}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:rgba(212,168,67,.2);border-radius:4px}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(212,168,67,.3)}50%{box-shadow:0 0 22px rgba(212,168,67,.6)}}
+@keyframes cardIn{from{opacity:0;transform:scale(.88) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes reveal{from{transform:rotateY(90deg) scale(.9)}to{transform:rotateY(0deg) scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+
+.screen{display:none;animation:fadeUp .4s ease;}
+.screen.active{display:block;}
+
+/* ── INPUT ── */
+.inp{
+  width:100%;padding:13px 16px;
+  background:#150e08;border:2px solid #5a4530;
+  border-radius:10px;color:#f5e6d3;font-size:.9rem;
+  font-family:'Cinzel',serif;letter-spacing:.12em;
+  text-align:center;outline:none;transition:border-color .2s;
+}
+.inp:focus{border-color:var(--gold);}
+
+/* ── BUTTONS ── */
+.btn-gold{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-light));
+  border:none;border-radius:10px;color:#120905;
+  font-size:.95rem;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;font-family:'Cinzel',serif;
+  animation:glow 2.5s ease infinite;transition:opacity .2s,transform .1s;
+}
+.btn-gold:hover{opacity:.92;transform:translateY(-1px);}
+.btn-gold:active{transform:translateY(0);}
+.btn-gold:disabled{background:#3a2510;opacity:.4;cursor:not-allowed;animation:none;}
+.btn-outline{
+  background:transparent;border:2px solid var(--gold);
+  color:var(--gold);padding:8px 22px;border-radius:8px;
+  font-size:.8rem;font-weight:700;cursor:pointer;
+  font-family:'Cinzel',serif;transition:background .2s;
+}
+.btn-outline:hover{background:rgba(212,168,67,.12);}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.88);
+  display:flex;align-items:center;justify-content:center;
+  z-index:999;padding:20px;
+}
+.modal{
+  background:#120905;border:2px solid rgba(212,168,67,.25);
+  border-radius:18px;padding:28px 24px;max-width:380px;
+  width:100%;animation:popIn .3s ease;
+}
+
+/* ── HEADER ── */
+.header{text-align:center;}
+.header-title{
+  font-weight:900;letter-spacing:.08em;
+  background:linear-gradient(135deg,#b8860b,var(--gold),var(--gold-light),var(--gold),#b8860b);
+  background-size:300% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 4s linear infinite;
+}
+.header-sub{color:#a89880;letter-spacing:.28em;}
+
+/* ── THEME CARDS ── */
+.theme-btn{
+  flex:1;padding:16px 10px;
+  background:#150e08;border:2px solid #5a4530;
+  border-radius:12px;color:#a89880;cursor:pointer;
+  text-align:center;transition:all .25s;font-family:'Cinzel',serif;
+}
+.theme-btn.active{
+  background:rgba(212,168,67,.08);
+  border-color:var(--gold);color:var(--gold);
+  box-shadow:0 0 14px rgba(212,168,67,.25);
+}
+
+/* ── ROLE BUTTONS ── */
+.role-btn{
+  padding:16px 10px;background:#150e08;
+  border-radius:12px;cursor:pointer;text-align:center;
+  transition:all .2s;font-family:'Cinzel',serif;
+}
+
+/* ── SCOREBAR ── */
+.score-pill{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 16px;border-radius:10px;
+  border:1px solid transparent;transition:all .3s;
+}
+.score-pill.active-red{background:rgba(229,57,53,.12);border-color:rgba(229,57,53,.35);}
+.score-pill.active-blue{background:rgba(30,136,229,.12);border-color:rgba(30,136,229,.35);}
+.dot{width:10px;height:10px;border-radius:50%;}
+.dot.pulse{animation:pulse 1.4s ease infinite;}
+
+/* ── BOARD ── */
+#board{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:6px;max-width:740px;margin:0 auto;padding:0 4px;
+}
+
+/* ── CARD ── */
+.card{
+  border-radius:10px;padding:10px 4px;min-height:72px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:default;position:relative;overflow:hidden;
+  border:2.5px solid;transition:transform .15s,box-shadow .15s;
+  font-family:'Cinzel',serif;
+}
+.card.clickable{cursor:pointer;}
+.card.clickable:hover{transform:translateY(-3px) scale(1.04);}
+.card.clickable:active{transform:scale(.97);}
+.card-hi{
+  font-family:'Noto Sans Devanagari',sans-serif;
+  font-weight:700;line-height:1.2;z-index:1;
+}
+.card-en{
+  font-family:'Noto Sans',sans-serif;
+  font-size:.42rem;letter-spacing:.09em;font-weight:500;z-index:1;margin-top:3px;
+}
+.card-strip{
+  position:absolute;top:0;left:0;right:0;height:5px;border-radius:7px 7px 0 0;
+}
+.card-label{
+  position:absolute;bottom:0;left:0;right:0;height:16px;
+  display:flex;align-items:center;justify-content:center;border-radius:0 0 7px 7px;
+}
+.card-label span{font-size:.38rem;font-weight:800;color:#fff;letter-spacing:.2em;}
+.card-dot{
+  position:absolute;top:8px;right:6px;width:8px;height:8px;
+  border-radius:50%;
+}
+.card-corner{position:absolute;width:8px;height:8px;}
+.card-corner.tl{top:4px;left:4px;border-top:1.5px solid rgba(184,154,64,.25);border-left:1.5px solid rgba(184,154,64,.25);}
+.card-corner.tr{top:4px;right:4px;border-top:1.5px solid rgba(184,154,64,.25);border-right:1.5px solid rgba(184,154,64,.25);}
+.card-corner.bl{bottom:4px;left:4px;border-bottom:1.5px solid rgba(184,154,64,.25);border-left:1.5px solid rgba(184,154,64,.25);}
+.card-corner.br{bottom:4px;right:4px;border-bottom:1.5px solid rgba(184,154,64,.25);border-right:1.5px solid rgba(184,154,64,.25);}
+
+/* ── LOADER ── */
+.loader{
+  width:28px;height:28px;border:3px solid rgba(212,168,67,.2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .8s linear infinite;margin:0 auto;
+}
+
+/* ── LOG ── */
+#log-box{
+  max-height:88px;overflow-y:auto;
+  background:#150e08cc;border-radius:10px;
+  border:1px solid rgba(90,69,48,.25);padding:10px 14px;
+  font-family:'Noto Sans',sans-serif;
+}
+
+/* Mobile tweaks */
+@media(max-width:480px){
+  #board{gap:4px;}
+  .card{min-height:62px;padding:8px 2px;}
+  .score-pill{padding:5px 10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="screen-loading" class="screen active" style="display:flex!important;align-items:center;justify-content:center;min-height:100vh;">
+  <div style="text-align:center;">
+    <div class="loader"></div>
+    <div style="margin-top:14px;font-size:.7rem;color:#a89880;letter-spacing:.2em;">LOADING…</div>
+  </div>
+</div>
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen">
+  <div style="max-width:430px;margin:0 auto;padding:36px 20px 50px;">
+    <div class="header" style="margin-bottom:28px;">
+      <div class="header-title" style="font-size:2.2rem;">CODENAMES</div>
+      <div class="header-sub" style="font-size:.62rem;margin-top:2px;">MYTHOLOGICAL EDITION</div>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <div style="font-size:.55rem;color:#a89880;letter-spacing:.22em;margin-bottom:8px;text-align:center;">YOUR NAME</div>
+      <input id="inp-name" class="inp" placeholder="Enter your name"/>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:.55rem;color:#a89880;letter-spacing:.22em;margin-bottom:10px;text-align:center;">CHOOSE THEME</div>
+      <div style="display:flex;gap:12px;">
+        <button class="theme-btn active" data-theme="ramayan" onclick="selectTheme('ramayan')">
+          <div style="font-size:1.6rem;margin-bottom:4px;" id="theme-emoji-ramayan">🏹</div>
+          <div style="font-size:.8rem;font-weight:700;">Ramayan</div>
+        </button>
+        <button class="theme-btn" data-theme="krishna" onclick="selectTheme('krishna')">
+          <div style="font-size:1.6rem;margin-bottom:4px;" id="theme-emoji-krishna">🦚</div>
+          <div style="font-size:.8rem;font-weight:700;">Krishna</div>
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <button onclick="togglePw()" id="pw-toggle"
+        style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;
+        background:transparent;border:1px dashed #5a4530;border-radius:8px;
+        color:#a89880;font-size:.68rem;font-family:'Noto Sans',sans-serif;cursor:pointer;">
+        🔓 Add room password (optional)
+      </button>
+      <div id="pw-box" style="display:none;margin-top:8px;animation:fadeUp .2s ease;">
+        <input id="inp-pw" class="inp" type="text" placeholder="Room password" style="letter-spacing:.08em;"/>
+      </div>
+    </div>
+
+    <button class="btn-gold" onclick="doCreate()" id="btn-create">CREATE ROOM</button>
+    <div id="home-error" style="color:#e53935;font-size:.72rem;margin-top:10px;text-align:center;font-family:'Noto Sans',sans-serif;display:none;"></div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:18px 0 16px;">
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,#5a4530);"></div>
+      <span style="font-size:.55rem;color:#a89880;letter-spacing:.18em;">OR JOIN</span>
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,#5a4530,transparent);"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <input id="inp-join" class="inp" placeholder="ROOM CODE" maxlength="6" style="flex:1;letter-spacing:.25em;text-transform:uppercase;"/>
+      <button class="btn-outline" onclick="doJoin()">JOIN →</button>
+    </div>
+
+    <div style="margin-top:24px;padding:14px 16px;background:#150e08aa;border:1px solid rgba(90,69,48,.2);border-radius:12px;font-family:'Noto Sans',sans-serif;font-size:.65rem;color:#a89880;line-height:1.85;">
+      <div style="font-family:'Cinzel',serif;color:var(--gold);font-size:.58rem;letter-spacing:.18em;margin-bottom:8px;">HOW TO PLAY</div>
+      <div><b style="color:#f5e6d3;">1.</b> Create room → share the 5-letter code with friends</div>
+      <div><b style="color:#f5e6d3;">2.</b> Each team picks a Spymaster (sees all team colors)</div>
+      <div><b style="color:#f5e6d3;">3.</b> Spymasters give one-word clues + a number</div>
+      <div><b style="color:#f5e6d3;">4.</b> Guessers tap cards — wrong color ends the turn</div>
+      <div><b style="color:#f5e6d3;">5.</b> Red needs <b style="color:#e53935;">9</b> · Blue needs <b style="color:#1e88e5;">8</b> · First team wins!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOBBY ═══ -->
+<div id="screen-lobby" class="screen">
+  <div style="max-width:430px;margin:0 auto;padding:16px 20px 50px;">
+    <div class="header" style="margin-bottom:18px;">
+      <div class="header-title" style="font-size:1.1rem;">CODENAMES</div>
+      <div class="header-sub" style="font-size:.48rem;">MYTHOLOGICAL EDITION</div>
+    </div>
+
+    <div style="text-align:center;padding:22px 20px;background:#150e08;border:1px solid rgba(212,168,67,.18);border-radius:16px;margin-bottom:20px;box-shadow:0 0 30px rgba(212,168,67,.08);">
+      <div style="font-size:.52rem;color:#a89880;letter-spacing:.25em;margin-bottom:6px;">ROOM CODE — SHARE THIS WITH FRIENDS!</div>
+      <div id="lobby-code" style="font-size:2.6rem;font-weight:900;color:var(--gold);letter-spacing:.35em;margin-bottom:8px;text-shadow:0 0 20px rgba(212,168,67,.5);"></div>
+      <div id="lobby-protected" style="font-size:.62rem;color:#27ae60;margin-bottom:8px;font-family:'Noto Sans',sans-serif;display:none;">🔒 Password protected</div>
+      <button onclick="doCopy()" id="btn-copy"
+        style="background:transparent;border:1px solid rgba(212,168,67,.5);color:var(--gold);padding:8px 20px;border-radius:8px;font-size:.6rem;cursor:pointer;letter-spacing:.12em;transition:all .2s;font-family:'Cinzel',serif;">
+        📋 COPY INVITE
+      </button>
+      <div id="lobby-theme" style="margin-top:8px;font-size:.65rem;color:#a89880;"></div>
+    </div>
+
+    <!-- Spymaster status -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <div style="flex:1;padding:10px;background:#150e08;border:1px solid rgba(229,57,53,.25);border-radius:10px;text-align:center;">
+        <div style="font-size:.48rem;color:#e53935;letter-spacing:.15em;margin-bottom:4px;">RED SPYMASTER</div>
+        <div id="spy-red-status" style="font-size:.7rem;font-family:'Noto Sans',sans-serif;color:#5a4530;">Vacant</div>
+      </div>
+      <div style="flex:1;padding:10px;background:#150e08;border:1px solid rgba(30,136,229,.25);border-radius:10px;text-align:center;">
+        <div style="font-size:.48rem;color:#1e88e5;letter-spacing:.15em;margin-bottom:4px;">BLUE SPYMASTER</div>
+        <div id="spy-blue-status" style="font-size:.7rem;font-family:'Noto Sans',sans-serif;color:#5a4530;">Vacant</div>
+      </div>
+    </div>
+
+    <div style="font-size:.55rem;color:#a89880;letter-spacing:.2em;margin-bottom:12px;text-align:center;">SELECT YOUR ROLE</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="role-grid"></div>
+
+    <button onclick="goHome()"
+      style="display:block;margin:20px auto 0;background:transparent;border:none;color:#a89880;font-size:.68rem;cursor:pointer;font-family:'Noto Sans',sans-serif;text-decoration:underline;opacity:.7;">
+      ← Back to Home
+    </button>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="screen-game" class="screen">
+  <div style="max-width:760px;margin:0 auto;padding:6px 8px 40px;">
+    <!-- Top bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:.58rem;color:#a89880;font-family:'Noto Sans',sans-serif;padding:0 4px;">
+      <button onclick="goLobby()" style="background:transparent;border:none;color:#a89880;cursor:pointer;font-size:.58rem;font-family:'Noto Sans',sans-serif;">← Lobby</button>
+      <span id="game-room-label" style="color:var(--gold);font-family:'Cinzel',serif;font-weight:700;"></span>
+      <span id="game-role-label" style="font-weight:600;"></span>
+    </div>
+
+    <!-- Score bar -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:6px 0 10px;flex-wrap:wrap;">
+      <div class="score-pill" id="red-pill">
+        <div class="dot" id="red-dot" style="background:#e53935;"></div>
+        <span id="red-score" style="color:#e53935;font-weight:700;font-size:1rem;"></span>
+      </div>
+      <div id="turn-pill" style="color:var(--gold);font-size:.62rem;padding:5px 14px;border:1px solid rgba(212,168,67,.25);border-radius:20px;background:rgba(212,168,67,.06);font-weight:700;letter-spacing:.06em;text-align:center;"></div>
+      <div class="score-pill" id="blue-pill">
+        <span id="blue-score" style="color:#1e88e5;font-weight:700;font-size:1rem;"></span>
+        <div class="dot" id="blue-dot" style="background:#1e88e5;"></div>
+      </div>
+    </div>
+
+    <div id="waiting-msg" style="text-align:center;color:#a89880;font-size:.7rem;font-style:italic;margin-bottom:6px;font-family:'Noto Sans',sans-serif;display:none;">
+      ⏳ Waiting for other team…
+    </div>
+
+    <!-- Board -->
+    <div id="board"></div>
+
+    <!-- Actions -->
+    <div style="display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap;">
+      <button id="btn-end-turn" class="btn-outline" onclick="doEndTurn()" style="display:none;">End Turn →</button>
+      <button id="btn-new-game" onclick="doNewGame()"
+        style="display:none;background:linear-gradient(135deg,var(--gold),var(--gold-light));border:none;color:#120905;padding:10px 28px;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;animation:glow 2s ease infinite;">
+        🔄 New Game
+      </button>
+    </div>
+
+    <!-- Spy hint -->
+    <div id="spy-hint" style="display:none;text-align:center;margin-top:12px;padding:8px 16px;background:#150e08aa;border:1px dashed rgba(212,168,67,.3);border-radius:8px;max-width:420px;margin-left:auto;margin-right:auto;">
+      <div style="font-size:.58rem;color:#a89880;font-family:'Noto Sans',sans-serif;">👁️ You can see all cards. Give verbal clues only — don't click!</div>
+    </div>
+
+    <!-- Log -->
+    <div id="log-wrap" style="display:none;margin-top:14px;max-width:740px;margin-left:auto;margin-right:auto;">
+      <div style="font-size:.5rem;color:#a89880;margin-bottom:5px;font-family:'Cinzel',serif;letter-spacing:.12em;">GAME LOG</div>
+      <div id="log-box"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PW MODAL ═══ -->
+<div id="modal-pw" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div style="text-align:center;font-size:2rem;margin-bottom:6px;">🔒</div>
+    <div style="text-align:center;font-size:.85rem;font-weight:700;color:var(--gold);margin-bottom:16px;letter-spacing:.1em;">ROOM PASSWORD</div>
+    <input id="inp-join-pw" class="inp" type="password" placeholder="Enter password" style="margin-bottom:12px;"/>
+    <div id="pw-modal-error" style="color:#e53935;font-size:.72rem;text-align:center;margin-bottom:10px;font-family:'Noto Sans',sans-serif;display:none;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closePwModal()" style="flex:1;padding:12px;background:transparent;border:1px solid #5a4530;border-radius:8px;color:#a89880;font-size:.8rem;cursor:pointer;font-family:'Cinzel',serif;">Cancel</button>
+      <button onclick="doPwJoin()" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border:none;border-radius:8px;color:#120905;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;">Enter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// GAME DATA
+// ══════════════════════════════════════════════
+const THEMES = {
+  ramayan:{label:"Ramayan",emoji:"🏹",words:{
+    red:[{hi:"सीता",en:"Sita"},{hi:"कुम्भकर्ण",en:"Kumbhkaran"},{hi:"पुष्पक",en:"Pushpaka"},{hi:"भरत",en:"Bharata"},{hi:"ताड़का",en:"Tataka"},{hi:"अंगद",en:"Angada"},{hi:"सागर",en:"Ocean"},{hi:"वाल्मीकि",en:"Valmiki"},{hi:"अंगूठी",en:"Ring"}],
+    blue:[{hi:"हनुमान",en:"Hanuman"},{hi:"दशरथ",en:"Dasharatha"},{hi:"विभीषण",en:"Vibhishana"},{hi:"मृग",en:"Deer"},{hi:"चित्रकूट",en:"Chitrakoot"},{hi:"राक्षस",en:"Rakshasa"},{hi:"पादुका",en:"Paduka"},{hi:"लक्ष्मण",en:"Lakshmana"}],
+    neutral:[{hi:"सुबाहु",en:"Subahu"},{hi:"अशोक वाटिका",en:"Ashoka Vatika"},{hi:"शत्रुघ्न",en:"Shatrughna"},{hi:"सेतु",en:"Bridge"},{hi:"कौशल्या",en:"Kaushalya"},{hi:"जटायु",en:"Jatayu"},{hi:"दण्डक",en:"Dandaka"},{hi:"वानर",en:"Vanara"}],
+  }},
+  krishna:{label:"Krishna",emoji:"🦚",words:{
+    red:[{hi:"कृष्ण",en:"Krishna"},{hi:"राधा",en:"Radha"},{hi:"गोवर्धन",en:"Govardhan"},{hi:"सुदर्शन",en:"Sudarshan"},{hi:"गीता",en:"Gita"},{hi:"द्रौपदी",en:"Draupadi"},{hi:"अर्जुन",en:"Arjuna"},{hi:"वृन्दावन",en:"Vrindavan"},{hi:"माखन",en:"Makhan"}],
+    blue:[{hi:"कंस",en:"Kansa"},{hi:"देवकी",en:"Devaki"},{hi:"रुक्मिणी",en:"Rukmini"},{hi:"कुरुक्षेत्र",en:"Kurukshetra"},{hi:"सुदामा",en:"Sudama"},{hi:"स्यमन्तक",en:"Syamantaka"},{hi:"द्वारका",en:"Dwaraka"},{hi:"यशोदा",en:"Yashoda"}],
+    neutral:[{hi:"मथुरा",en:"Mathura"},{hi:"यमुना",en:"Yamuna"},{hi:"गोपियाँ",en:"Gopis"},{hi:"नारद",en:"Narada"},{hi:"विदुर",en:"Vidura"},{hi:"कुब्जा",en:"Kubja"},{hi:"पाञ्चजन्य",en:"Panchajanya"},{hi:"गरुड़",en:"Garuda"}],
+  }},
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let state = {
+  screen:'loading', name:'', theme:'ramayan', showPw:false,
+  roomCode:'', role:null, game:null, pendingGame:null,
+};
+let pollInterval = null;
+
+// ══════════════════════════════════════════════
+// STORAGE — uses localStorage so anyone on the
+// same device can share; for real multi-device
+// multiplayer, replace save/load with a backend.
+// We use BroadcastChannel for same-origin sync
+// and a shared key in localStorage.
+// ══════════════════════════════════════════════
+const STORAGE_KEY = code => `cn-myth:${code}`;
+let bc = null;
+try { bc = new BroadcastChannel('codenames-myth'); } catch(e){}
+
+function saveGame(g){
+  try{localStorage.setItem(STORAGE_KEY(g.roomCode), JSON.stringify(g));}catch(e){}
+  if(bc) bc.postMessage({type:'update', code:g.roomCode});
+}
+async function loadGame(code){
+  try{
+    const d = localStorage.getItem(STORAGE_KEY(code));
+    if(d) return JSON.parse(d);
+  }catch(e){}
+  return null;
+}
+
+if(bc){
+  bc.onmessage = async (ev) => {
+    if(ev.data?.type==='update' && ev.data.code===state.roomCode){
+      const g = await loadGame(state.roomCode);
+      if(g){ state.game=g; renderCurrentScreen(); }
+    }
+  };
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function genCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<5;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+function getPid(){let id=sessionStorage.getItem("cn_pid");if(!id){id="P"+Math.random().toString(36).substr(2,8);sessionStorage.setItem("cn_pid",id);}return id;}
+const PID = getPid();
+
+function buildBoard(t){
+  const th=THEMES[t],all=[
+    ...th.words.red.map(w=>({...w,team:"red"})),
+    ...th.words.blue.map(w=>({...w,team:"blue"})),
+    ...th.words.neutral.map(w=>({...w,team:"neutral"})),
+  ];
+  return shuffle(all).map((item,i)=>({id:i,hi:item.hi,en:item.en,team:item.team,revealed:false}));
+}
+function createGame(theme,code,password){
+  return{roomCode:code,theme,password:password||"",board:buildBoard(theme),
+    currentTurn:"red",redScore:0,blueScore:0,redTotal:9,blueTotal:8,
+    winner:null,log:[],spymasterRed:null,spymasterBlue:null,createdAt:Date.now()};
+}
+
+// ══════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ══════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
+  const el=document.getElementById('screen-'+id);
+  if(el){el.style.display='block';el.classList.add('active');}
+  state.screen=id;
+}
+
+function renderCurrentScreen(){
+  if(state.screen==='lobby') renderLobby();
+  if(state.screen==='game') renderGame();
+}
+
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
+let selectedTheme = 'ramayan';
+
+function selectTheme(t){
+  selectedTheme=t;
+  document.querySelectorAll('.theme-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.theme===t);
+  });
+}
+
+let pwOn = false;
+function togglePw(){
+  pwOn=!pwOn;
+  document.getElementById('pw-box').style.display=pwOn?'block':'none';
+  const btn=document.getElementById('pw-toggle');
+  btn.textContent=pwOn?'🔒 Password on — click to remove':'🔓 Add room password (optional)';
+  btn.style.borderColor=pwOn?'#27ae60':'#5a4530';
+  btn.style.color=pwOn?'#27ae60':'#a89880';
+  if(!pwOn) document.getElementById('inp-pw').value='';
+}
+
+function showHomeError(msg){
+  const el=document.getElementById('home-error');
+  el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+
+async function doCreate(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){showHomeError("Enter your name first");return;}
+  const pw=pwOn?document.getElementById('inp-pw').value.trim():'';
+  if(pwOn&&!pw){showHomeError("Enter a password or disable it");return;}
+  state.name=name;
+  const code=genCode();
+  const g=createGame(selectedTheme,code,pw);
+  saveGame(g);
+  state.roomCode=code;state.game=g;
+  showScreen('lobby');
+  startPoll();
+  renderLobby();
+}
+
+async function doJoin(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){showHomeError("Enter your name first");return;}
+  const code=document.getElementById('inp-join').value.toUpperCase().trim();
+  if(code.length<4){showHomeError("Enter a valid room code");return;}
+  state.name=name;
+  const g=await loadGame(code);
+  if(!g){showHomeError("Room not found. Check the code.");return;}
+  if(g.password){
+    state.pendingGame=g;
+    document.getElementById('inp-join-pw').value='';
+    document.getElementById('pw-modal-error').style.display='none';
+    document.getElementById('modal-pw').style.display='flex';
+    return;
+  }
+  state.roomCode=code;state.game=g;
+  showScreen('lobby');startPoll();renderLobby();
+}
+
+// ══════════════════════════════════════════════
+// PASSWORD MODAL
+// ══════════════════════════════════════════════
+function closePwModal(){
+  document.getElementById('modal-pw').style.display='none';
+  state.pendingGame=null;
+}
+function doPwJoin(){
+  const pw=document.getElementById('inp-join-pw').value;
+  const errEl=document.getElementById('pw-modal-error');
+  if(pw===state.pendingGame.password){
+    state.roomCode=state.pendingGame.roomCode;
+    state.game=state.pendingGame;
+    state.pendingGame=null;
+    document.getElementById('modal-pw').style.display='none';
+    showScreen('lobby');startPoll();renderLobby();
+  } else {
+    errEl.textContent='Wrong password.';errEl.style.display='block';
+  }
+}
+document.getElementById('inp-join-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doPwJoin();});
+
+// ══════════════════════════════════════════════
+// LOBBY
+// ══════════════════════════════════════════════
+function renderLobby(){
+  const g=state.game;if(!g)return;
+  document.getElementById('lobby-code').textContent=state.roomCode;
+  const th=THEMES[g.theme];
+  document.getElementById('lobby-theme').textContent=`${th.emoji} ${th.label}`;
+  document.getElementById('lobby-protected').style.display=g.password?'block':'none';
+
+  // Spymaster status
+  document.getElementById('spy-red-status').textContent=g.spymasterRed?`👁 ${g.spymasterRed.name}`:'Vacant';
+  document.getElementById('spy-red-status').style.color=g.spymasterRed?'#e53935':'#5a4530';
+  document.getElementById('spy-blue-status').textContent=g.spymasterBlue?`👁 ${g.spymasterBlue.name}`:'Vacant';
+  document.getElementById('spy-blue-status').style.color=g.spymasterBlue?'#1e88e5':'#5a4530';
+
+  // Role buttons
+  const grid=document.getElementById('role-grid');
+  const roles=[
+    {r:"spymaster-red",label:"Red Spymaster",color:"#e53935",em:"👁️",f:"spymasterRed",desc:"See all teams, give clues"},
+    {r:"spymaster-blue",label:"Blue Spymaster",color:"#1e88e5",em:"👁️",f:"spymasterBlue",desc:"See all teams, give clues"},
+    {r:"guesser-red",label:"Red Guesser",color:"#e53935",em:"🎯",f:null,desc:"Guess your team's words"},
+    {r:"guesser-blue",label:"Blue Guesser",color:"#1e88e5",em:"🎯",f:null,desc:"Guess your team's words"},
+  ];
+  grid.innerHTML=roles.map(item=>{
+    const taken=item.f&&g[item.f]&&g[item.f].id!==PID;
+    const isMe=item.f&&g[item.f]&&g[item.f].id===PID;
+    let sub=item.desc;
+    if(taken) sub=`✗ Taken: ${g[item.f]?.name||'someone'}`;
+    else if(isMe) sub='✓ You';
+    return `<button onclick="doRole('${item.r}')" ${taken?'disabled':''} class="role-btn"
+      style="border:2px solid ${taken?item.color+'20':item.color+'70'};color:${taken?'#5a4530':item.color};opacity:${taken?.45:1};${isMe?`box-shadow:0 0 10px ${item.color}30;background:${item.color}10;`:''}">
+      <div style="font-size:1.3rem;margin-bottom:3px;">${item.em}</div>
+      <div style="font-size:.72rem;font-weight:700;">${item.label}</div>
+      <div style="font-size:.48rem;margin-top:3px;font-family:'Noto Sans',sans-serif;color:${taken?'#e53935':isMe?'#27ae60':'#a89880'};opacity:${taken?1:.85};">${sub}</div>
+    </button>`;
+  }).join('');
+}
+
+async function doRole(r){
+  const g={...state.game,board:[...state.game.board],log:[...(state.game.log||[])]};
+  if(r==="spymaster-red"){
+    if(g.spymasterRed&&g.spymasterRed.id!==PID)return;
+    g.spymasterRed={id:PID,name:state.name||"Player"};
+    saveGame(g);state.game=g;
+  }else if(r==="spymaster-blue"){
+    if(g.spymasterBlue&&g.spymasterBlue.id!==PID)return;
+    g.spymasterBlue={id:PID,name:state.name||"Player"};
+    saveGame(g);state.game=g;
+  }
+  state.role=r;
+  showScreen('game');
+  renderGame();
+}
+
+function doCopy(){
+  let msg=`🎮 Join my Codenames Mythology game!\n\nRoom Code: ${state.roomCode}`;
+  if(state.game?.password) msg+=`\nPassword: ${state.game.password}`;
+  msg+=`\n\nOpen the game link and enter this code to join.`;
+  navigator.clipboard.writeText(msg).catch(()=>{});
+  const btn=document.getElementById('btn-copy');
+  btn.textContent='✓ COPIED!';btn.style.borderColor='#27ae60';btn.style.color='#27ae60';
+  setTimeout(()=>{btn.textContent='📋 COPY INVITE';btn.style.borderColor='rgba(212,168,67,.5)';btn.style.color='var(--gold)';},2500);
+}
+
+// ══════════════════════════════════════════════
+// GAME
+// ══════════════════════════════════════════════
+const PALETTE={
+  red:{
+    strip:"linear-gradient(90deg,#b71c1c,#e53935,#b71c1c)",
+    bg:"linear-gradient(150deg,#3d0e0b 0%,#6b1a14 60%,#8b2218 100%)",
+    border:"#e53935",glow:"0 0 20px rgba(229,57,53,.4),0 4px 12px rgba(0,0,0,.5)",
+    hi:"#ffeae6",en:"#f5b8ad",label:"RED",labelBg:"rgba(200,40,35,.92)",dot:"#e53935",
+  },
+  blue:{
+    strip:"linear-gradient(90deg,#0d47a1,#1e88e5,#0d47a1)",
+    bg:"linear-gradient(150deg,#08172e 0%,#133a6b 60%,#1a4d8f 100%)",
+    border:"#1e88e5",glow:"0 0 20px rgba(30,136,229,.4),0 4px 12px rgba(0,0,0,.5)",
+    hi:"#e3f2fd",en:"#90caf9",label:"BLUE",labelBg:"rgba(20,100,200,.92)",dot:"#1e88e5",
+  },
+  neutral:{
+    strip:"linear-gradient(90deg,#5d4e37,#8a7a5a,#5d4e37)",
+    bg:"linear-gradient(150deg,#2a2218 0%,#4a3d2d 60%,#5a4d3a 100%)",
+    border:"#8a7a5a",glow:"0 2px 10px rgba(0,0,0,.4)",
+    hi:"#d5c8b5",en:"#a89880",label:"NEUTRAL",labelBg:"rgba(100,85,60,.92)",dot:"#8a7a5a",
+  },
+};
+
+function renderCard(card,isSpymaster,canClick,idx){
+  const p=PALETTE[card.team];
+  const fs=card.hi.length>6?".8rem":card.hi.length>4?".92rem":"1.05rem";
+  const delay=`${idx*.025}s`;
+
+  if(!card.revealed&&!isSpymaster){
+    // Unrevealed player card
+    return `<button class="card${canClick?' clickable':''}"
+      onclick="${canClick?`revealCard(${card.id})`:''}()"
+      style="background:linear-gradient(155deg,#faf0d7 0%,#f0e0b8 35%,#e3cf9a 75%,#d6bc80 100%);border-color:#c8aa6e;box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.4);animation:cardIn .35s ease ${delay} both;">
+      <div class="card-corner tl"></div><div class="card-corner tr"></div>
+      <div class="card-corner bl"></div><div class="card-corner br"></div>
+      <div class="card-hi" style="font-size:${fs};color:#3a2510;">${card.hi}</div>
+      <div class="card-en" style="color:#9a7e4a;">${card.en.toUpperCase()}</div>
+    </button>`;
+  }
+
+  if(!card.revealed&&isSpymaster){
+    // Spymaster sees color hint
+    return `<button class="card" disabled
+      style="background:linear-gradient(155deg,#faf0d7 0%,#f0e0b8 35%,#e3cf9a 75%,#d6bc80 100%);border:3px solid ${p.border};box-shadow:0 0 14px ${p.border}44,0 4px 12px rgba(0,0,0,.3);animation:cardIn .35s ease ${delay} both;">
+      <div class="card-strip" style="background:${p.strip};"></div>
+      <div class="card-dot" style="background:${p.dot};box-shadow:0 0 6px ${p.dot};"></div>
+      <div class="card-hi" style="font-size:${fs};color:#3a2510;margin-top:4px;">${card.hi}</div>
+      <div class="card-en" style="color:#9a7e4a;">${card.en.toUpperCase()}</div>
+    </button>`;
+  }
+
+  // Revealed
+  return `<button class="card" disabled
+    style="background:${p.bg};border-color:${p.border};box-shadow:${p.glow};animation:cardIn .35s ease ${delay} both;">
+    <div class="card-strip" style="background:${p.strip};"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.06) 0%,transparent 65%);pointer-events:none;"></div>
+    <div class="card-hi" style="font-size:${fs};color:${p.hi};margin-top:4px;text-shadow:0 1px 4px rgba(0,0,0,.5);">${card.hi}</div>
+    <div class="card-en" style="color:${p.en};">${card.en.toUpperCase()}</div>
+    <div class="card-label" style="background:${p.labelBg};"><span>${p.label}</span></div>
+  </button>`;
+}
+
+function renderGame(){
+  const g=state.game;if(!g)return;
+  const isSpy=state.role==="spymaster-red"||state.role==="spymaster-blue";
+  const my=state.role.includes("red")?"red":"blue";
+  const isMyTurn=g.currentTurn===my;
+
+  // Header
+  const th=THEMES[g.theme];
+  document.getElementById('game-room-label').textContent=`${th.emoji} ${state.roomCode}${g.password?' 🔒':''}`;
+  document.getElementById('game-role-label').style.color=my==="red"?"#e53935":"#1e88e5";
+  document.getElementById('game-role-label').textContent=isSpy?"👁 Spymaster":"🎯 Guesser";
+
+  // Scores
+  document.getElementById('red-score').textContent=`RED ${g.redScore}/${g.redTotal}`;
+  document.getElementById('blue-score').textContent=`BLUE ${g.blueScore}/${g.blueTotal}`;
+  document.getElementById('red-pill').className='score-pill'+(g.currentTurn==='red'?' active-red':'');
+  document.getElementById('blue-pill').className='score-pill'+(g.currentTurn==='blue'?' active-blue':'');
+  document.getElementById('red-dot').className='dot'+(g.currentTurn==='red'?' pulse':'');
+  document.getElementById('blue-dot').className='dot'+(g.currentTurn==='blue'?' pulse':'');
+  document.getElementById('turn-pill').textContent=g.winner?`🏆 ${g.winner.toUpperCase()} WINS!`:`${g.currentTurn.toUpperCase()} TEAM'S TURN`;
+
+  // Waiting
+  document.getElementById('waiting-msg').style.display=(!isSpy&&!isMyTurn&&!g.winner)?'block':'none';
+
+  // Board
+  document.getElementById('board').innerHTML=g.board.map((card,i)=>{
+    const canClick=!card.revealed&&!isSpy&&!g.winner&&isMyTurn;
+    return renderCard(card,isSpy,canClick,i);
+  }).join('');
+
+  // Buttons
+  document.getElementById('btn-end-turn').style.display=(!isSpy&&isMyTurn&&!g.winner)?'inline-block':'none';
+  document.getElementById('btn-new-game').style.display=g.winner?'inline-block':'none';
+  document.getElementById('spy-hint').style.display=isSpy&&!g.winner?'block':'none';
+
+  // Log
+  const log=g.log||[];
+  if(log.length>0){
+    document.getElementById('log-wrap').style.display='block';
+    document.getElementById('log-box').innerHTML=[...log].reverse().slice(0,8).map(e=>`
+      <div style="font-size:.62rem;color:#a89880;line-height:1.65;">
+        <span style="color:${e.team==='red'?'#e53935':'#1e88e5'};font-weight:600;">${e.team.toUpperCase()}</span>
+        → <strong style="color:#f5e6d3;">${e.word}</strong>
+        <span style="opacity:.5;">${e.cardTeam===e.team?'✓':e.cardTeam==='neutral'?'◦':'✗'} ${e.cardTeam}</span>
+      </div>`).join('');
+  }else{
+    document.getElementById('log-wrap').style.display='none';
+  }
+}
+
+function revealCard(cardId){
+  const g=state.game;if(!g||g.winner)return;
+  const my=state.role.includes("red")?"red":"blue";
+  if(g.currentTurn!==my)return;
+  const ng={...g,board:g.board.map(c=>({...c})),log:[...(g.log||[])]};
+  const card=ng.board.find(c=>c.id===cardId);
+  if(!card||card.revealed)return;
+  card.revealed=true;
+  ng.log.push({team:my,word:card.hi,cardTeam:card.team});
+  if(card.team==="red")ng.redScore++;
+  if(card.team==="blue")ng.blueScore++;
+  if(ng.redScore>=ng.redTotal)ng.winner="red";
+  if(ng.blueScore>=ng.blueTotal)ng.winner="blue";
+  if(card.team!==my)ng.currentTurn=my==="red"?"blue":"red";
+  state.game=ng;saveGame(ng);renderGame();
+}
+
+function doEndTurn(){
+  if(!state.game)return;
+  const ng={...state.game,currentTurn:state.game.currentTurn==="red"?"blue":"red"};
+  state.game=ng;saveGame(ng);renderGame();
+}
+
+function doNewGame(){
+  const ng=createGame(state.game.theme,state.roomCode,state.game.password);
+  state.game=ng;saveGame(ng);renderGame();
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function goHome(){
+  stopPoll();
+  state.roomCode='';state.game=null;state.role=null;
+  showScreen('home');
+}
+function goLobby(){
+  state.role=null;
+  showScreen('lobby');
+  renderLobby();
+}
+
+// ══════════════════════════════════════════════
+// POLLING (fallback for multi-tab / same device)
+// ══════════════════════════════════════════════
+function startPoll(){
+  stopPoll();
+  pollInterval=setInterval(async()=>{
+    if(!state.roomCode)return;
+    const g=await loadGame(state.roomCode);
+    if(g&&JSON.stringify(g)!==JSON.stringify(state.game)){
+      state.game=g;renderCurrentScreen();
+    }
+  },2000);
+}
+function stopPoll(){if(pollInterval){clearInterval(pollInterval);pollInterval=null;}}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  // Check URL for room code param
+  const params=new URLSearchParams(location.search);
+  const code=params.get('room');
+  const savedName=sessionStorage.getItem('cn_name')||'';
+  if(savedName) document.getElementById('inp-name').value=savedName;
+  if(code){
+    document.getElementById('inp-join').value=code.toUpperCase();
+  }
+  document.getElementById('inp-name').addEventListener('input',e=>sessionStorage.setItem('cn_name',e.target.value));
+  showScreen('home');
+});
+
+// ── Expose globals needed by inline onclick ──
+window.selectTheme=selectTheme;
+window.togglePw=togglePw;
+window.doCreate=doCreate;
+window.doJoin=doJoin;
+window.doPwJoin=doPwJoin;
+window.closePwModal=closePwModal;
+window.doRole=doRole;
+window.doCopy=doCopy;
+window.revealCard=revealCard;
+window.doEndTurn=doEndTurn;
+window.doNewGame=doNewGame;
+window.goHome=goHome;
+window.goLobby=goLobby;
+</script>
+</body>
+</html>
