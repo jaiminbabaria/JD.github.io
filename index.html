@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -425,6 +426,8 @@ body{
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+const FIREBASE_URL = "https://jdcodenames-default-rtdb.firebaseio.com";
+
 // ══════════════════════════════════════════════
 // GAME DATA
 // ══════════════════════════════════════════════
@@ -467,12 +470,12 @@ const PID=getPid();
 // ══════════════════════════════════════════════
 // FIREBASE INIT
 // ══════════════════════════════════════════════
-function initFirebase(dbUrl){
+function initFirebase(){
   try{
     const app=initializeApp({
       apiKey:"AIzaSyDummyKeyNotNeededForRTDB",
-      databaseURL: dbUrl,
-    }, "codenames-"+Date.now());
+      databaseURL: FIREBASE_URL,
+    }, "codenames");
     DB=getDatabase(app);
     return true;
   }catch(e){
@@ -481,23 +484,14 @@ function initFirebase(dbUrl){
 }
 
 function saveFbUrl(){
-  const url=document.getElementById('fb-url-input').value.trim();
-  if(!url||!url.includes('firebaseio.com')){
-    const el=document.getElementById('fb-setup-error');
-    el.textContent='Please enter a valid Firebase Realtime Database URL.';
-    el.style.display='block';return;
-  }
-  const clean=url.endsWith('/')?url.slice(0,-1):url;
-  localStorage.setItem('cn_fb_url',clean);
-  if(initFirebase(clean)){
-    showScreen('home');
-  }
+  initFirebase();
+  showScreen('home');
 }
 window.saveFbUrl=saveFbUrl;
 
 function resetFb(){
-  localStorage.removeItem('cn_fb_url');
-  showScreen('setup');
+  initFirebase();
+  showScreen('home');
 }
 window.resetFb=resetFb;
 
@@ -892,11 +886,10 @@ window.addEventListener('load',()=>{
   if(savedName)document.getElementById('inp-name').value=savedName;
   document.getElementById('inp-name').addEventListener('input',e=>sessionStorage.setItem('cn_name',e.target.value));
 
-  const fbUrl=localStorage.getItem('cn_fb_url');
-  if(fbUrl&&initFirebase(fbUrl)){
+  if(initFirebase()){
     showScreen('home');
   }else{
-    showScreen('setup');
+    showScreen('home');
   }
 });
 
